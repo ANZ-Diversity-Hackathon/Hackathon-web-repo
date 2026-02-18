@@ -62,59 +62,33 @@ app.post("/api/presign", async (req, res) => {
 // sessionId：前端传一个固定的，保持上下文
 app.post("/api/chat", async (req, res) => {
   try {
-    console.log("Incoming chat:", {
-      hasBody: !!req.body,
-      sessionId: req.body?.sessionId,
-      messageLen: req.body?.message?.length,
-    });
-    console.log("Agent:", { AGENT_ID, AGENT_ALIAS_ID });
-
     const { message, sessionId } = req.body || {};
     if (!message) return res.status(400).json({ ok: false, error: "message required" });
 
-    console.log("DEBUG ENV:", {
-      BEDROCK_AGENT_ID: process.env.BEDROCK_AGENT_ID,
-      BEDROCK_AGENT_ALIAS: process.env.BEDROCK_AGENT_ALIAS,
-    });
+    const agentId = (process.env.BEDROCK_AGENT_ID || "").trim();
+    const agentAliasId = (process.env.BEDROCK_AGENT_ALIAS_ID || "").trim();
 
-    console.log("DEBUG USING:", {
-      AGENT_ID,
-      AGENT_ALIAS_ID,
-      AGENT_ID_len: AGENT_ID?.length,
-      AGENT_ALIAS_ID_len: AGENT_ALIAS_ID?.length,
-    });
+    console.log("DEBUG ENV:", { agentIdLen: agentId.length, agentAliasIdLen: agentAliasId.length });
 
-    const agentId = (AGENT_ID || "").trim();
-    const agentAliasId = (AGENT_ALIAS_ID || "").trim();
+    if (!agentId) throw new Error("FATAL: agentId empty at runtime (BEDROCK_AGENT_ID is empty)");
+    if (!agentAliasId) throw new Error("FATAL: agentAliasId empty at runtime (BEDROCK_AGENT_ALIAS_ID is empty)");
 
-    if (!agentId) throw new Error("FATAL: agentId empty at runtime (AGENT_ID is empty)");
-    if (!agentAliasId) throw new Error("FATAL: agentAliasId empty at runtime (AGENT_ALIAS_ID is empty)");
-
-    const command = new InvokeAgentCommand({
+    const cmd = new InvokeAgentCommand({
       agentId,
       agentAliasId,
-      sessionId,
-      inputText,
+      sessionId: sessionId || "demo-session",
+      inputText: message,
     });
-
-
-//    const cmd = new InvokeAgentCommand({
-//      agentId: AGENT_ID,
-//      agentAliasId: AGENT_ALIAS_ID,
-//      sessionId: sessionId || "demo-session",
-//      inputText: message,
-//    });
 
     const resp = await br.send(cmd);
 
     let text = "";
     if (resp.completion) {
-      for await (const chunkEvent of resp.completion) {
-        const chunk = chunkEvent.chunk;
-        if (chunk?.bytes) text += Buffer.from(chunk.bytes).toString("utf-8");
+      for await (const ev of resp.completion) {
+        const bytes = ev?.chunk?.bytes;
+        if (bytes) text += Buffer.from(bytes).toString("utf-8");
       }
     }
-
     return res.json({ ok: true, text });
   } catch (e) {
     console.error("❌ /api/chat error:", e);
