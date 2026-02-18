@@ -72,12 +72,38 @@ app.post("/api/chat", async (req, res) => {
     const { message, sessionId } = req.body || {};
     if (!message) return res.status(400).json({ ok: false, error: "message required" });
 
-    const cmd = new InvokeAgentCommand({
-      agentId: AGENT_ID,
-      agentAliasId: AGENT_ALIAS_ID,
-      sessionId: sessionId || "demo-session",
-      inputText: message,
+    console.log("DEBUG ENV:", {
+      BEDROCK_AGENT_ID: process.env.BEDROCK_AGENT_ID,
+      BEDROCK_AGENT_ALIAS: process.env.BEDROCK_AGENT_ALIAS,
     });
+
+    console.log("DEBUG USING:", {
+      AGENT_ID,
+      AGENT_ALIAS_ID,
+      AGENT_ID_len: AGENT_ID?.length,
+      AGENT_ALIAS_ID_len: AGENT_ALIAS_ID?.length,
+    });
+
+    const agentId = (AGENT_ID || "").trim();
+    const agentAliasId = (AGENT_ALIAS_ID || "").trim();
+
+    if (!agentId) throw new Error("FATAL: agentId empty at runtime (AGENT_ID is empty)");
+    if (!agentAliasId) throw new Error("FATAL: agentAliasId empty at runtime (AGENT_ALIAS_ID is empty)");
+
+    const command = new InvokeAgentCommand({
+      agentId,
+      agentAliasId,
+      sessionId,
+      inputText,
+    });
+
+
+//    const cmd = new InvokeAgentCommand({
+//      agentId: AGENT_ID,
+//      agentAliasId: AGENT_ALIAS_ID,
+//      sessionId: sessionId || "demo-session",
+//      inputText: message,
+//    });
 
     const resp = await br.send(cmd);
 
