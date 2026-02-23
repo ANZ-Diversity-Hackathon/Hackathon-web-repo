@@ -39,7 +39,7 @@ app.post("/api/presign", async (req, res) => {
     if (!filename || !contentType) {
       return res.status(400).json({ ok: false, error: "filename/contentType required" });
     }
-    const safeUser = (userId || "demo").replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeUser = "demo";
     const ext = path.extname(filename).toLowerCase() || "";
     const id = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
     const key = `${UPLOAD_PREFIX}${safeUser}/${Date.now()}_${id}${ext}`;
