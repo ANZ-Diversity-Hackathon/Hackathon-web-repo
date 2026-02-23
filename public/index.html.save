@@ -1,0 +1,297 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <title>Bedrock Agent Chat</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --bot: #eef2ff;
+      --me: #e0f2fe;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #eef2ff, #f8fafc);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      border: 1px solid var(--border);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
+
+    #chat {
+      height: 60vh;
+      overflow-y: auto;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      margin: 10px 0;
+      display: flex;
+      flex-direction: column;
+      max-width: 75%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+
+    .me {
+      align-self: flex-end;
+      background: var(--me);
+    }
+
+    .bot {
+      align-self: flex-start;
+      background: var(--bot);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      outline: none;
+      transition: .2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+    }
+
+    button {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* Scrollbar 美化 */
+    #chat::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #chat::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 10px;
+    }
+
+    #chat::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.user {
+  font-size: 14px;
+  color: #666;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+  </style>
+</head> 
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <div class="header">
+      <h2 style="margin:0;">Chat with MoneyMind</h2>
+      <div class="user">👤 UserName</div>
+    </div>
+
+    <div id="chat"></div>
+
+    <div class="row">
+      <input id="text" type="text" placeholder="Type a message..." />
+      <button id="send">Send</button>
+
+      <label style="display:inline-flex;align-items:center;gap:8px;">
+        <input id="file" type="file" accept="image/*,application/pdf" style="display:none;" />
+        <button id="uploadBtn" type="button">Upload receipt</button>
+      </label>
+    </div>
+
+    <div class="small">
+      Tip: 上传成功后会自动把 S3 bucket/key 发给 agent，让它调用 action group 处理 Textract。
+    </div>
+
+  </div>
+</div>
+<script>
+  const chat = document.getElementById("chat");
+  const text = document.getElementById("text");
+  const sendBtn = document.getElementById("send");
+  const fileInput = document.getElementById("file");
+  const uploadBtn = document.getElementById("uploadBtn");
+
+  // 简单 sessionId（同一个浏览器会话保持上下文）
+  const sessionId =
+  localStorage.getItem("sessionId") ||
+  (window.crypto?.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString());
+
+  localStorage.setItem("sessionId", sessionId);
+
+
+  function add(role, content) {
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerHTML = `<span class="${role}">${role === "me" ? "You" : "Agent"}:</span> ${content}`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendMessage(message) {
+    add("me", escapeHtml(message));
+    const resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"content-type":"application/json"},
+      body: JSON.stringify({ message, sessionId })
+    }).then(r => r.json());
+
+    if (!resp.ok) {
+      add("bot", "Error: " + escapeHtml(resp.error || "unknown"));
+    } else {
+      add("bot", escapeHtml(resp.text || ""));
+    }
+  }
+
+  sendBtn.onclick = () => {
+    const m = text.value.trim();
+    if (!m) return;
+    text.value = "";
+    sendMessage(m);
+  };
+
+  text.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendBtn.click();
+  });
+
+  uploadBtn.onclick = () => fileInput.click();
+
+  fileInput.onchange = async () => {
+    const f = fileInput.files?.[0];
+    if (!f) return;
+
+    add("me", `Uploading: ${escapeHtml(f.name)} ...`);
+
+    // 1) get presigned url
+    const pres = await fetch("/api/presign", {
+      method: "POST",
+      headers: {"content-type":"application/json"},
+      body: JSON.stringify({
+        filename: f.name,
+        contentType: f.type || "application/octet-stream",
+        userId: "demo"   // 你可改成登录后的真实用户ID
+      })
+    }).then(r => r.json());
+
+    if (!pres.ok) {
+      add("bot", "Presign error: " + escapeHtml(pres.error || "unknown"));
+      return;
+    }
+
+    // 2) upload to s3 via PUT
+    const putResp = await fetch(pres.uploadUrl, {
+      method: "PUT",
+      headers: { "content-type": f.type || "application/octet-stream" },
+      body: f
+    });
+
+    if (!putResp.ok) {
+      add("bot", "Upload failed: HTTP " + putResp.status);
+      return;
+    }
+
+    add("me", `Uploaded OK. bucket=${escapeHtml(pres.bucket)} key=${escapeHtml(pres.key)}`);
+
+    // 3) tell agent to process it (agent will call your action group)
+    const msg = `I uploaded a receipt image. Please process it via the receipt-processing action.
+bucket: ${pres.bucket}
+key: ${pres.key}
+user_id: demo`;
+    await sendMessage(msg);
+  };
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>

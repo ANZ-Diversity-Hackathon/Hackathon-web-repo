@@ -2,41 +2,318 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
   <title>Bedrock Agent Chat</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: system-ui, Arial; margin: 0; background: #f6f6f6; }
-    .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
-    .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 8px rgba(0,0,0,.08); }
-    #chat { height: 60vh; overflow:auto; border: 1px solid #eee; border-radius: 10px; padding: 12px; background:#fafafa;}
-    .msg { margin: 10px 0; }
-    .me { font-weight: 600; }
-    .bot { font-weight: 600; }
-    .row { display:flex; gap: 8px; margin-top: 12px; }
-    input[type="text"] { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ddd; }
-    button { padding: 12px 14px; border-radius: 10px; border: 1px solid #ddd; background:#fff; cursor:pointer; }
-    button:hover { background:#f0f0f0; }
-    .small { color:#666; font-size: 12px; margin-top: 10px; }
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --bot: #eef2ff;
+      --me: #e0f2fe;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #eef2ff, #f8fafc);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      border: 1px solid var(--border);
+      overflow: visible;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
+
+    /* ===== Chat bubble UI ===== */
+    .chat{
+      height: 60vh;
+      overflow: auto;
+      padding: 16px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .bubble-row{
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+      align-items: flex-end;
+    }
+
+    .bubble-row.me{ justify-content: flex-end; }
+    .bubble-row.bot{ justify-content: flex-start; }
+
+    .avatar{
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
+
+    .bubble{
+      max-width: min(680px, 78%);
+      min-width: 120px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
+    .bubble-row.bot .bubble{
+      background: var(--bot);
+      border-color: #dbeafe;
+    }
+    .bubble-row.me .bubble{
+      background: var(--me);
+      border-color: #bae6fd;
+    }
+
+    .bubble-row.bot .bubble{ border-bottom-left-radius: 6px; }
+    .bubble-row.me .bubble{ border-bottom-right-radius: 6px; }
+
+    .bubble-row { align-items: flex-end; }
+    .bubble-row > * { flex: 0 1 auto; }
+
+    .bubble-wrap{
+      display: flex;
+      flex-direction: column;
+      flex: 0 1 auto;
+      max-width: 78%;
+    }
+
+    .bubble-row.me .bubble-wrap{ align-items: flex-end; }
+
+    .meta{
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 4px 2px;
+    }
+
+    .chat::-webkit-scrollbar { width: 10px; }
+    .chat::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+    .chat::-webkit-scrollbar-track { background: transparent; }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      outline: none;
+      transition: .2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+    }
+
+    button {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:active { transform: translateY(0); }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    #chat::-webkit-scrollbar { width: 8px; }
+    #chat::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+    #chat::-webkit-scrollbar-track { background: transparent; }
+
+    .header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+    }
+
+    .title-left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .logo{
+      height:42px;
+      width:auto;
+    }
+
+    .title-left h2{
+      margin:0;
+      font-weight:600;
+    }
+
+    .user-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f3f4f6;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+
+    .user-box select {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+    }
+
+    button:hover { opacity: 0.9; }
+
+    /* =============================
+       Piggy Jump Button Animation
+       ============================= */
+
+    #send { white-space: nowrap; }
+
+    #send .btn-icon {
+      width: 28px;
+      height: 28px;
+      display: inline-block;
+    }
+
+    /* Send 变成小猪按钮（白底圆形） */
+    #send.piggy {
+      background: white !important;
+      border: 1px solid var(--border);
+      padding: 10px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+      transition: all 0.25s ease;
+      transform: none;
+    }
+
+    #send.piggy:hover {
+      transform: none;
+      opacity: 1;
+    }
+
+    #send.piggy:active { transform: none; }
+
+    /* 跳一下（只跳一次，不循环） */
+    #send.piggy .btn-icon {
+      animation: piggyJump 0.6s ease;
+    }
+
+    @keyframes piggyJump {
+      0%   { transform: translateY(0) scale(1); }
+      30%  { transform: translateY(-10px) scale(1.08); }
+      60%  { transform: translateY(2px) scale(0.95); }
+      100% { transform: translateY(0) scale(1); }
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="card">
-      <h2 style="margin-top:0;">Chat with Bedrock Agent</h2>
-      <div id="chat"></div>
+      <div class="header">
+        <div class="title-left">
+          <img src="/img/WeixinImage_20260223171338_1269_1882.png" class="logo">
+          <h2>Chat with MoneyMind</h2>
+        </div>
+
+        <div class="user-box">
+          👤
+          <select id="username">
+            <option value="Jane">Jane</option>
+            <option value="Kiya">Kiya</option>
+            <option value="Mandy">Mandy</option>
+            <option value="Cielvia">Cielvia</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="chat" class="chat"></div>
 
       <div class="row">
-        <input id="text" type="text" placeholder="Type a message..."/>
-        <button id="send">Send</button>
+        <input id="text" type="text" placeholder="Type a message..." />
+        <button id="send" type="button">Send</button>
+
         <label style="display:inline-flex;align-items:center;gap:8px;">
-          <input id="file" type="file" accept="image/*,application/pdf" style="display:none;"/>
+          <input id="file" type="file" accept="image/*,application/pdf" style="display:none;" />
           <button id="uploadBtn" type="button">Upload receipt</button>
         </label>
       </div>
 
-      <div class="small">
-        Tip: 上传成功后会自动把 S3 bucket/key 发给 agent，让它调用 action group 处理 Textract。
-      </div>
+      <div class="small"></div>
     </div>
   </div>
 
@@ -47,40 +324,106 @@
   const fileInput = document.getElementById("file");
   const uploadBtn = document.getElementById("uploadBtn");
 
-  // 简单 sessionId（同一个浏览器会话保持上下文）
-  const sessionId =
-  localStorage.getItem("sessionId") ||
-  (window.crypto?.randomUUID
-    ? crypto.randomUUID()
-    : Date.now().toString());
+  const PIGGY_ICON_SRC = "/img/6674bfbf3937e28f3ee73d6ef6cee362.png";
+  const SEND_LABEL = sendBtn.textContent;
 
+  const sessionId =
+    localStorage.getItem("sessionId") ||
+    (window.crypto?.randomUUID ? crypto.randomUUID() : Date.now().toString());
   localStorage.setItem("sessionId", sessionId);
 
+  function getUserId() {
+    const el = document.getElementById("username");
+    return (el?.value || "demo").trim() || "demo";
+  }
 
   function add(role, content) {
-    const div = document.createElement("div");
-    div.className = "msg";
-    div.innerHTML = `<span class="${role}">${role === "me" ? "You" : "Agent"}:</span> ${content}`;
-    chat.appendChild(div);
+    const usernameEl = document.getElementById("username");
+    const userLabel = usernameEl ? (usernameEl.value || "You") : "You";
+    let txt = String(content ?? "");
+    if (role !== "me") txt = txt.replace(/^Agent:\s*/i, "");
+    txt = txt.trimStart();
+
+    const row = document.createElement("div");
+    row.className = "bubble-row " + (role === "me" ? "me" : "bot");
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = role === "me" ? "👤" : "💰";
+
+    const wrap = document.createElement("div");
+    wrap.className = "bubble-wrap";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = role === "me" ? userLabel : "MoneyMind";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = txt;
+
+    wrap.appendChild(meta);
+    wrap.appendChild(bubble);
+
+    if (role === "me") {
+      row.appendChild(wrap);
+      row.appendChild(avatar);
+    } else {
+      row.appendChild(avatar);
+      row.appendChild(wrap);
+    }
+
+    chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
   }
 
-  async function sendMessage(message) {
-    add("me", escapeHtml(message));
-    const resp = await fetch("/api/chat", {
-      method: "POST",
-      headers: {"content-type":"application/json"},
-      body: JSON.stringify({ message, sessionId })
-    }).then(r => r.json());
+  // ===== Piggy Button Control =====
+  function showPiggy() {
+    sendBtn.classList.add("piggy");
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<img class="btn-icon" src="${PIGGY_ICON_SRC}" alt="piggy" />`;
+  }
 
-    if (!resp.ok) {
-      add("bot", "Error: " + escapeHtml(resp.error || "unknown"));
-    } else {
-      add("bot", escapeHtml(resp.text || ""));
+  function restoreSendButton() {
+    sendBtn.classList.remove("piggy");
+    sendBtn.disabled = false;
+    sendBtn.textContent = SEND_LABEL;
+  }
+
+  async function sendMessage(message) {
+    add("me", message);
+
+    // 立刻变小猪，并跳一下
+    showPiggy();
+
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: {"content-type":"application/json"},
+        body: JSON.stringify({ message, sessionId, userId: getUserId() })
+      }).then(r => r.json());
+
+      if (!resp.ok) {
+        add("bot", "Error: " + (resp.error || "unknown"));
+        restoreSendButton();
+        return;
+      }
+
+      add("bot", resp.text || "");
+
+      // 成功后停留 600ms 再恢复按钮
+      setTimeout(() => {
+        restoreSendButton();
+      },400);
+
+    } catch (e) {
+      add("bot", "Error: network failure");
+      restoreSendButton();
     }
   }
 
   sendBtn.onclick = () => {
+    if (sendBtn.disabled) return;
     const m = text.value.trim();
     if (!m) return;
     text.value = "";
@@ -97,25 +440,25 @@
     const f = fileInput.files?.[0];
     if (!f) return;
 
-    add("me", `Uploading: ${escapeHtml(f.name)} ...`);
+    add("me", `Uploading: ${f.name} ...`);
 
-    // 1) get presigned url
+    const userId = getUserId();
+
     const pres = await fetch("/api/presign", {
       method: "POST",
       headers: {"content-type":"application/json"},
       body: JSON.stringify({
         filename: f.name,
         contentType: f.type || "application/octet-stream",
-        userId: "demo"   // 你可改成登录后的真实用户ID
+        userId: userId
       })
     }).then(r => r.json());
 
     if (!pres.ok) {
-      add("bot", "Presign error: " + escapeHtml(pres.error || "unknown"));
+      add("bot", "Presign error: " + (pres.error || "unknown"));
       return;
     }
 
-    // 2) upload to s3 via PUT
     const putResp = await fetch(pres.uploadUrl, {
       method: "PUT",
       headers: { "content-type": f.type || "application/octet-stream" },
@@ -127,19 +470,14 @@
       return;
     }
 
-    add("me", `Uploaded OK. bucket=${escapeHtml(pres.bucket)} key=${escapeHtml(pres.key)}`);
+    add("me", `Uploaded OK. bucket=${pres.bucket} key=${pres.key}`);
 
-    // 3) tell agent to process it (agent will call your action group)
     const msg = `I uploaded a receipt image. Please process it via the receipt-processing action.
 bucket: ${pres.bucket}
 key: ${pres.key}
-user_id: demo`;
+user_id: ${userId}`;
     await sendMessage(msg);
   };
-
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
 </script>
 </body>
 </html>
