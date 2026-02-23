@@ -73,11 +73,25 @@ app.post("/api/chat", async (req, res) => {
     if (!agentId) throw new Error("FATAL: agentId empty at runtime (BEDROCK_AGENT_ID is empty)");
     if (!agentAliasId) throw new Error("FATAL: agentAliasId empty at runtime (BEDROCK_AGENT_ALIAS_ID is empty)");
 
+    const DEMO_USER_ID = process.env.DEMO_USER_ID || "demo";
+    const FORCE_DEMO_USER = (process.env.FORCE_DEMO_USER ?? "true").toLowerCase() === "true";
     const cmd = new InvokeAgentCommand({
       agentId,
       agentAliasId,
       sessionId: sessionId || "demo-session",
       inputText: message,
+      // ⭐关键：强制所有 action 都以 demo 身份执行
+      sessionState: {
+        sessionAttributes: {
+          user_id: FORCE_DEMO_USER ? DEMO_USER_ID : undefined,
+          // 你也可以顺便把 display name 放进去，但不参与分区
+          display_user: req.body?.userId || "unknown"
+    },
+  },
+
+  // 建议先开 trace，方便你确认工具确实被调用
+  enableTrace: true,
+      
     });
 
     const resp = await br.send(cmd);
